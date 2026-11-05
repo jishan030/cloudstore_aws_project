@@ -1,4 +1,24 @@
-      - name: Debug OIDC Token Claims
+name: AWS OIDC Debug
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  aws-authentication:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # STEP 1: Verify actual OIDC claims
+      - name: Debug OIDC Claims
         uses: actions/github-script@v7
         with:
           script: |
@@ -8,10 +28,19 @@
               Buffer.from(token.split('.')[1], 'base64url').toString()
             );
 
-            core.info(JSON.stringify({
-              issuer: payload.iss,
-              audience: payload.aud,
-              subject: payload.sub,
-              repository: payload.repository,
-              ref: payload.ref
-            }, null, 2));
+            console.log("ISSUER:", payload.iss);
+            console.log("AUDIENCE:", payload.aud);
+            console.log("SUBJECT:", payload.sub);
+            console.log("REPOSITORY:", payload.repository);
+            console.log("REF:", payload.ref);
+
+      # STEP 2: AWS Authentication
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::577267183252:role/GitHubActions-OIDC-Role
+          aws-region: ap-south-1
+
+      # STEP 3: Verify AWS Identity
+      - name: Verify AWS Identity
+        run: aws sts get-caller-identity
